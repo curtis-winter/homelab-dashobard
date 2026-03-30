@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine as build
 
+# Install git to allow build tools to capture commit information
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 # Copy package files and install dependencies
