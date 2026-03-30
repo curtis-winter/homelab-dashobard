@@ -5,7 +5,26 @@ export interface HomeLabApp {
   description?: string;
 }
 
-export const DEFAULT_IP = import.meta.env.VITE_HOME_LAB_IP || "10.0.0.134";
+// Safely access environment variables in both Node.js and Vite environments
+const getInitialIp = () => {
+  try {
+    // Check Node.js process.env
+    if (typeof process !== "undefined" && process.env?.VITE_HOME_LAB_IP) {
+      return process.env.VITE_HOME_LAB_IP;
+    }
+    // Check Vite import.meta.env
+    // @ts-ignore
+    if (typeof import.meta !== "undefined" && import.meta.env?.VITE_HOME_LAB_IP) {
+      // @ts-ignore
+      return import.meta.env.VITE_HOME_LAB_IP;
+    }
+  } catch (e) {
+    // Fallback if access fails
+  }
+  return "10.0.0.134";
+};
+
+export const DEFAULT_IP = getInitialIp();
 
 export const DEFAULT_APPS: HomeLabApp[] = [
   { id: "overseerr", name: "Overseerr", port: 5055, description: "Request Management" },

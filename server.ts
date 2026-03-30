@@ -4,6 +4,11 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
+
 import { DEFAULT_APPS, DEFAULT_IP } from "./src/constants";
 
 const __filename = fileURLToPath(import.meta.url);
