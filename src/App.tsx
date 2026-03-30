@@ -316,6 +316,16 @@ export default function App() {
     }
   };
 
+  const deleteSingleApp = async () => {
+    if (!singleEditApp) return;
+    const updatedApps = apps.filter(a => a.id !== singleEditApp.id);
+    const success = await saveConfig(updatedApps, ip);
+    if (success) {
+      setIsSingleEditOpen(false);
+      setSingleEditApp(null);
+    }
+  };
+
   return (
     <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a] text-white" : "bg-[#f8f9fa] text-[#1a1a1a]"}`}>
       <div className="max-w-6xl mx-auto px-6 md:px-12">
@@ -1015,19 +1025,28 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col gap-3 pt-4">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={saveSingleApp}
+                      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                    >
+                      <Save size={18} />
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={() => setIsSingleEditOpen(false)}
+                      className={`flex-1 py-3 rounded-2xl font-bold border transition-all ${darkMode ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-gray-100 text-gray-400 hover:text-black"}`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                   <button
-                    onClick={saveSingleApp}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                    onClick={deleteSingleApp}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold border transition-all ${darkMode ? "bg-red-950/20 border-red-900/50 text-red-400 hover:bg-red-900/30" : "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"}`}
                   >
-                    <Save size={18} />
-                    Save Changes
-                  </button>
-                  <button
-                    onClick={() => setIsSingleEditOpen(false)}
-                    className={`flex-1 py-3 rounded-2xl font-bold border transition-all ${darkMode ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-gray-100 text-gray-400 hover:text-black"}`}
-                  >
-                    Cancel
+                    <Trash2 size={18} />
+                    Delete Application
                   </button>
                 </div>
               </div>
