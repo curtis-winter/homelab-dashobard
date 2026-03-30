@@ -168,8 +168,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
-      <div className="max-w-6xl mx-auto p-6 md:p-12">
-        <header className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
+      <div className="max-w-6xl mx-auto px-6 md:px-12">
+        <header className="sticky top-0 z-30 pt-12 pb-8 bg-[#f8f9fa]/90 backdrop-blur-md flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
