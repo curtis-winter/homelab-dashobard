@@ -72,6 +72,63 @@ async function startServer() {
     res.json({ status: "success", config: newConfig });
   });
 
+  app.get("/api/scan", async (req, res) => {
+    const ip = req.query.ip as string;
+    if (!ip) {
+      return res.status(400).json({ error: "IP address is required" });
+    }
+
+    const commonPorts = [
+      80, 443, 3000, 5000, 5001, 7878, 8000, 8006, 8080, 8081, 8096, 8112, 8123, 
+      8384, 8443, 8581, 8989, 9000, 9090, 9091, 9443, 9696, 32400
+    ];
+
+    const results = [];
+
+    const scanPort = async (port: number) => {
+      const protocols = ["http", "https"];
+      for (const protocol of protocols) {
+        const url = `${protocol}://${ip}:${port}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+
+        try {
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          if (response.ok || response.status === 401 || response.status === 403) {
+            let title = `App on Port ${port}`;
+            try {
+              const text = await response.text();
+              const titleMatch = text.match(/<title>(.*?)<\/title>/i);
+              if (titleMatch && titleMatch[1]) {
+                title = titleMatch[1].trim();
+              }
+            } catch (e) {
+              // Ignore text parsing errors
+            }
+            
+            return {
+              port,
+              name: title,
+              useHttps: protocol === "https",
+              url
+            };
+          }
+        } catch (e) {
+          clearTimeout(timeoutId);
+        }
+      }
+      return null;
+    };
+
+    // Scan in parallel with limited concurrency
+    const scanPromises = commonPorts.map(port => scanPort(port));
+    const scanResults = await Promise.all(scanPromises);
+    
+    res.json(scanResults.filter(r => r !== null));
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

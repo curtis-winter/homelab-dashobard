@@ -42,6 +42,8 @@ export default function App() {
   const [editingApps, setEditingApps] = useState<HomeLabApp[]>([]);
   const [editingIp, setEditingIp] = useState("");
   const [currentlyEditingId, setCurrentlyEditingId] = useState<string | null>(null);
+  const [scanResults, setScanResults] = useState<{ port: number; name: string; useHttps: boolean; url: string }[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
   // Fetch config from backend on mount
   useEffect(() => {
@@ -129,6 +131,7 @@ export default function App() {
     setEditingApps(sorted);
     setEditingIp(ip);
     setSettingsError(null);
+    setScanResults([]);
     setIsSettingsOpen(true);
   };
 
@@ -143,6 +146,54 @@ export default function App() {
     };
     setEditingApps(prev => [newApp, ...prev]);
     setCurrentlyEditingId(newApp.id);
+  };
+
+  const handleScan = async () => {
+    if (!editingIp) {
+      setSettingsError("Please enter a Node IP Address first.");
+      return;
+    }
+    
+    setIsScanning(true);
+    setScanResults([]);
+    setSettingsError(null);
+    
+    try {
+      const response = await fetch(`/api/scan?ip=${editingIp}`);
+      if (response.ok) {
+        const results = await response.json();
+        // Filter out apps that are already in editingApps
+        const filteredResults = results.filter((result: any) => 
+          !editingApps.some(app => app.port === result.port)
+        );
+        setScanResults(filteredResults);
+        if (filteredResults.length === 0) {
+          setSettingsError("No new applications found on common ports.");
+        }
+      } else {
+        setSettingsError("Failed to scan ports. Make sure the Node IP is reachable from the server.");
+      }
+    } catch (error) {
+      console.error("Scan error:", error);
+      setSettingsError("An error occurred while scanning ports.");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const quickAdd = (result: { port: number; name: string; useHttps: boolean }) => {
+    const newApp: HomeLabApp = {
+      id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
+      name: result.name,
+      port: result.port,
+      description: "Discovered via scan",
+      useHttps: result.useHttps,
+      iconUrl: ""
+    };
+    setEditingApps(prev => [newApp, ...prev]);
+    setScanResults(prev => prev.filter(r => r.port !== result.port));
+    setCurrentlyEditingId(newApp.id);
+    lookupIcon(newApp.id, newApp.name);
   };
 
   const removeApp = (id: string) => {
@@ -442,7 +493,12 @@ export default function App() {
                         placeholder="e.g. 10.0.0.134"
                       />
                     </div>
+                  </div>
+                </section>
 
+                <section>
+                  <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-6 ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>User Settings</h3>
+                  <div className="space-y-6">
                     <div className={`p-6 rounded-3xl border flex items-center justify-between transition-colors ${darkMode ? "bg-zinc-900 border-zinc-800" : "bg-gray-50 border-gray-100"}`}>
                       <div className="flex items-center gap-4">
                         <div className={`p-3 rounded-2xl ${darkMode ? "bg-zinc-800 text-white" : "bg-white text-black shadow-sm"}`}>
@@ -469,15 +525,63 @@ export default function App() {
                 <section>
                   <div className="flex items-center justify-between mb-6">
                     <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Applications</h3>
-                    <button 
-                      id="add-app-button"
-                      onClick={addApp}
-                      className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all ${darkMode ? "bg-zinc-900 text-white hover:bg-white hover:text-black" : "bg-gray-100 text-black hover:bg-black hover:text-white"}`}
-                    >
-                      <Plus size={14} />
-                      Add App
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        id="scan-ports-button"
+                        onClick={handleScan}
+                        disabled={isScanning}
+                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all disabled:opacity-50 ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700" : "bg-gray-100 text-black hover:bg-gray-200"}`}
+                      >
+                        <RefreshCw size={14} className={isScanning ? "animate-spin" : ""} />
+                        {isScanning ? "Scanning..." : "Scan Ports"}
+                      </button>
+                      <button 
+                        id="add-app-button"
+                        onClick={addApp}
+                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all ${darkMode ? "bg-zinc-900 text-white hover:bg-white hover:text-black" : "bg-gray-100 text-black hover:bg-black hover:text-white"}`}
+                      >
+                        <Plus size={14} />
+                        Add App
+                      </button>
+                    </div>
                   </div>
+
+                  <AnimatePresence>
+                    {scanResults.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-8 space-y-4"
+                      >
+                        <div className={`p-4 rounded-2xl border ${darkMode ? "bg-zinc-900/30 border-zinc-800" : "bg-blue-50/50 border-blue-100"}`}>
+                          <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${darkMode ? "text-zinc-500" : "text-blue-400"}`}>Discovered Applications</p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {scanResults.map((result) => (
+                              <div key={result.port} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${darkMode ? "bg-zinc-900 border-zinc-800 hover:border-zinc-700" : "bg-white border-gray-100 hover:border-gray-200"}`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded-lg ${darkMode ? "bg-zinc-800 text-white" : "bg-gray-50 text-black"}`}>
+                                    <Activity size={14} />
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-bold">{result.name}</p>
+                                    <p className={`text-[9px] font-mono ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Port {result.port} • {result.useHttps ? "HTTPS" : "HTTP"}</p>
+                                  </div>
+                                </div>
+                                <button 
+                                  onClick={() => quickAdd(result)}
+                                  className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                                >
+                                  <Plus size={12} />
+                                  Quick Add
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <div className="space-y-4">
                     {editingApps.map((app) => {
