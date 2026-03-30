@@ -2,6 +2,7 @@ export interface HomeLabApp {
   id: string;
   name: string;
   port: number;
+  path?: string;
   description?: string;
   useHttps?: boolean;
   iconUrl?: string;

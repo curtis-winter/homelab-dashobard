@@ -78,8 +78,9 @@ export default function App() {
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     const protocol = app.useHttps ? "https" : "http";
 
+    const pathSuffix = app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : "";
     try {
-      await fetch(`${protocol}://${targetIp}:${app.port}`, {
+      await fetch(`${protocol}://${targetIp}:${app.port}${pathSuffix}`, {
         mode: "no-cors",
         signal: controller.signal,
       });
@@ -142,6 +143,7 @@ export default function App() {
       id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
       name: "",
       port: 80,
+      path: "",
       description: "",
       useHttps: false,
       iconUrl: ""
@@ -189,6 +191,7 @@ export default function App() {
       id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
       name: result.name,
       port: result.port,
+      path: "",
       description: "Discovered via scan",
       useHttps: result.useHttps,
       iconUrl: ""
@@ -338,7 +341,7 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                href={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}`}
+                href={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}${app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`
@@ -411,7 +414,7 @@ export default function App() {
                         ? darkMode ? "bg-zinc-800 text-zinc-400" : "bg-gray-100 text-gray-500" 
                         : darkMode ? "bg-zinc-800/30 text-zinc-700" : "bg-gray-200/30 text-gray-400"}
                     `}>
-                      :{app.port}
+                      :{app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
                     </p>
                     {app.description && (
                       <span className={`
@@ -532,7 +535,7 @@ export default function App() {
                       <button 
                         id="add-app-button"
                         onClick={addApp}
-                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all ${darkMode ? "bg-zinc-900 text-white hover:bg-white hover:text-black" : "bg-gray-100 text-black hover:bg-black hover:text-white"}`}
+                        className={`flex items-center justify-center gap-2 text-xs font-bold w-36 py-2 rounded-xl transition-all ${darkMode ? "bg-zinc-900 text-white hover:bg-white hover:text-black" : "bg-gray-100 text-black hover:bg-black hover:text-white"}`}
                       >
                         <Plus size={14} />
                         Add App
@@ -554,7 +557,7 @@ export default function App() {
                         id="scan-ports-button"
                         onClick={handleScan}
                         disabled={isScanning}
-                        className={`flex items-center gap-2 text-xs font-bold px-6 py-2 rounded-xl transition-all disabled:opacity-50 whitespace-nowrap ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700" : "bg-gray-100 text-black hover:bg-gray-200"}`}
+                        className={`flex items-center justify-center gap-2 text-xs font-bold w-36 py-2 rounded-xl transition-all disabled:opacity-50 whitespace-nowrap ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700" : "bg-gray-100 text-black hover:bg-gray-200"}`}
                       >
                         <RefreshCw size={14} className={isScanning ? "animate-spin" : ""} />
                         {isScanning ? "Scanning..." : "Scan Ports"}
@@ -628,7 +631,7 @@ export default function App() {
                           `}
                           id={`editing-app-${app.id}`}
                         >
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="md:col-span-2 space-y-1">
                               <label htmlFor={`app-name-${app.id}`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Name</label>
                               <input 
@@ -648,6 +651,16 @@ export default function App() {
                                 type="number" 
                                 value={app.port}
                                 onChange={(e) => updateEditingApp(app.id, "port", parseInt(e.target.value) || 0)}
+                                className={`w-full bg-transparent border-b focus:outline-none py-1 font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label htmlFor={`app-path-${app.id}`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Path Suffix</label>
+                              <input 
+                                id={`app-path-${app.id}`}
+                                type="text" 
+                                value={app.path || ""}
+                                onChange={(e) => updateEditingApp(app.id, "path", e.target.value)}
                                 className={`w-full bg-transparent border-b focus:outline-none py-1 font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
                               />
                             </div>
