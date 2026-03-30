@@ -10,7 +10,6 @@ import {
   Trash2, 
   Save, 
   X,
-  ChevronRight,
   Info
 } from "lucide-react";
 import { DEFAULT_APPS, DEFAULT_IP, type HomeLabApp } from "./constants";
@@ -120,7 +119,8 @@ export default function App() {
       name: "",
       port: 80,
       description: "",
-      useHttps: false
+      useHttps: false,
+      iconUrl: ""
     };
     setEditingApps(prev => [newApp, ...prev]);
     setCurrentlyEditingId(newApp.id);
@@ -237,10 +237,24 @@ export default function App() {
               >
                 <div className="flex justify-between items-start mb-8">
                   <div className={`
-                    p-4 rounded-3xl transition-all duration-500
+                    p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden
                     ${app.isActive ? "bg-gray-50 text-black group-hover:bg-black group-hover:text-white" : "bg-gray-200/50 text-gray-400"}
                   `}>
-                    <ExternalLink size={24} />
+                    {app.iconUrl ? (
+                      <img 
+                        src={app.iconUrl} 
+                        alt={app.name} 
+                        className={`w-8 h-8 object-contain transition-all duration-500 ${app.isActive ? "group-hover:invert group-hover:brightness-0 group-hover:contrast-100" : "opacity-50"}`}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <div className={app.iconUrl ? "hidden" : ""}>
+                      <ExternalLink size={24} />
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {app.isChecking ? (
@@ -285,10 +299,6 @@ export default function App() {
                       </span>
                     )}
                   </div>
-                </div>
-                
-                <div className="absolute top-8 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronRight size={20} className="text-gray-300" />
                 </div>
               </motion.a>
             ))}
@@ -399,6 +409,16 @@ export default function App() {
                                 className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-mono"
                               />
                             </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Icon URL</label>
+                            <input 
+                              type="text" 
+                              value={app.iconUrl || ""}
+                              onChange={(e) => updateEditingApp(app.id, "iconUrl", e.target.value)}
+                              placeholder="https://example.com/logo.png"
+                              className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm font-mono text-gray-500"
+                            />
                           </div>
                           <div className="flex items-center gap-6">
                             <div className="flex-1 space-y-1">
