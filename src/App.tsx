@@ -33,6 +33,7 @@ export default function App() {
   // Settings form state
   const [editingApps, setEditingApps] = useState<HomeLabApp[]>([]);
   const [editingIp, setEditingIp] = useState("");
+  const [currentlyEditingId, setCurrentlyEditingId] = useState<string | null>(null);
 
   // Fetch config from backend on mount
   useEffect(() => {
@@ -115,15 +116,28 @@ export default function App() {
   const addApp = () => {
     const newApp: HomeLabApp = {
       id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
-      name: "New Application",
+      name: "",
       port: 80,
-      description: "Description"
+      description: ""
     };
     setEditingApps(prev => [newApp, ...prev]);
+    setCurrentlyEditingId(newApp.id);
   };
 
   const removeApp = (id: string) => {
     setEditingApps(prev => prev.filter(a => a.id !== id));
+    if (currentlyEditingId === id) setCurrentlyEditingId(null);
+  };
+
+  const discardAppEdit = (id: string) => {
+    const originalApp = apps.find(a => a.id === id);
+    if (originalApp) {
+      setEditingApps(prev => prev.map(a => a.id === id ? { ...originalApp } : a));
+    } else {
+      // It was a new app, remove it
+      setEditingApps(prev => prev.filter(a => a.id !== id));
+    }
+    setCurrentlyEditingId(null);
   };
 
   const updateEditingApp = (id: string, field: keyof HomeLabApp, value: string | number) => {
@@ -349,46 +363,89 @@ export default function App() {
                   </div>
 
                   <div className="space-y-4">
-                    {editingApps.map((app) => (
-                      <div key={app.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 space-y-4 group relative">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="md:col-span-2 space-y-1">
-                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Name</label>
-                            <input 
-                              type="text" 
-                              value={app.name}
-                              onChange={(e) => updateEditingApp(app.id, "name", e.target.value)}
-                              className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-medium"
-                            />
+                    {editingApps.map((app) => {
+                      const isEditing = currentlyEditingId === app.id;
+                      return (
+                        <div 
+                          key={app.id} 
+                          onClick={() => !isEditing && setCurrentlyEditingId(app.id)}
+                          className={`
+                            p-6 rounded-3xl border transition-all duration-300 group relative
+                            ${isEditing 
+                              ? "bg-white border-black shadow-xl scale-[1.02] z-10" 
+                              : "bg-gray-50 border-gray-100 hover:border-gray-300 cursor-pointer"}
+                          `}
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="md:col-span-2 space-y-1">
+                              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Name</label>
+                              <input 
+                                type="text" 
+                                value={app.name}
+                                autoFocus={isEditing && app.name === ""}
+                                onChange={(e) => updateEditingApp(app.id, "name", e.target.value)}
+                                placeholder="Application Name"
+                                className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-medium"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Port</label>
+                              <input 
+                                type="number" 
+                                value={app.port}
+                                onChange={(e) => updateEditingApp(app.id, "port", parseInt(e.target.value) || 0)}
+                                className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-mono"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Port</label>
+                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Description</label>
                             <input 
-                              type="number" 
-                              value={app.port}
-                              onChange={(e) => updateEditingApp(app.id, "port", parseInt(e.target.value) || 0)}
-                              className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-mono"
+                              type="text" 
+                              value={app.description || ""}
+                              onChange={(e) => updateEditingApp(app.id, "description", e.target.value)}
+                              placeholder="Description"
+                              className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm text-gray-500"
                             />
                           </div>
+                          
+                          {isEditing ? (
+                            <div className="absolute -top-3 -right-3 flex gap-2">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentlyEditingId(null);
+                                }}
+                                className="p-2 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-all"
+                                title="Confirm Edit"
+                              >
+                                <Save size={14} />
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  discardAppEdit(app.id);
+                                }}
+                                className="p-2 bg-white text-gray-400 rounded-full shadow-lg border border-gray-200 hover:text-red-500 hover:border-red-200 transition-all"
+                                title="Discard Changes"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeApp(app.id);
+                              }}
+                              className="absolute -top-2 -right-2 p-2 bg-white text-red-500 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Description</label>
-                          <input 
-                            type="text" 
-                            value={app.description || ""}
-                            onChange={(e) => updateEditingApp(app.id, "description", e.target.value)}
-                            className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm text-gray-500"
-                          />
-                        </div>
-                        
-                        <button 
-                          onClick={() => removeApp(app.id)}
-                          className="absolute -top-2 -right-2 p-2 bg-white text-red-500 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
               </div>
