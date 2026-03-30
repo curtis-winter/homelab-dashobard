@@ -1,0 +1,5 @@
+{
+  "name": "Home Lab Dashboard",
+  "description": "A minimalist dashboard for monitoring and accessing local Home Lab applications.",
+  "requestFramePermissions": []
+}
