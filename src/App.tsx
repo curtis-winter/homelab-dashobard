@@ -11,7 +11,8 @@ import {
   Save, 
   X,
   Info,
-  Search
+  Search,
+  MoreVertical
 } from "lucide-react";
 import { DEFAULT_APPS, DEFAULT_IP, type HomeLabApp } from "./constants";
 
@@ -45,6 +46,8 @@ export default function App() {
   const [scanResults, setScanResults] = useState<{ port: number; name: string; useHttps: boolean; url: string }[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [customPorts, setCustomPorts] = useState("");
+  const [isSingleEditOpen, setIsSingleEditOpen] = useState(false);
+  const [singleEditApp, setSingleEditApp] = useState<HomeLabApp | null>(null);
 
   // Fetch config from backend on mount
   useEffect(() => {
@@ -220,6 +223,9 @@ export default function App() {
 
   const updateEditingApp = (id: string, field: keyof HomeLabApp, value: string | number | boolean) => {
     setEditingApps(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
+    if (singleEditApp?.id === id) {
+      setSingleEditApp(prev => prev ? { ...prev, [field]: value } : null);
+    }
   };
 
   const lookupIcon = async (id: string, name: string) => {
@@ -276,6 +282,37 @@ export default function App() {
     } catch (error) {
       console.error("Failed to save config to backend", error);
       setSettingsError("Failed to save settings to the server.");
+    }
+  };
+
+  const openSingleEdit = (app: HomeLabApp) => {
+    setSingleEditApp({ ...app });
+    setIsSingleEditOpen(true);
+  };
+
+  const saveSingleApp = async () => {
+    if (!singleEditApp) return;
+    
+    try {
+      setSettingsError(null);
+      const updatedApps = apps.map(a => a.id === singleEditApp.id ? singleEditApp : a);
+      const newConfig = { apps: updatedApps, ip };
+      const response = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newConfig),
+      });
+      
+      if (response.ok) {
+        setApps(updatedApps);
+        setIsSingleEditOpen(false);
+        setSingleEditApp(null);
+      } else {
+        setSettingsError("Failed to save application settings.");
+      }
+    } catch (error) {
+      console.error("Failed to save single app config", error);
+      setSettingsError("Failed to save application settings.");
     }
   };
 
@@ -399,14 +436,27 @@ export default function App() {
                 </div>
 
                 <div className="mt-auto">
-                  <h2 className={`
-                    text-2xl font-semibold mb-2 tracking-tight transition-colors
-                    ${app.isActive 
-                      ? darkMode ? "text-white" : "text-gray-900" 
-                      : darkMode ? "text-zinc-600" : "text-gray-400"}
-                  `}>
-                    {app.name}
-                  </h2>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h2 className={`
+                      text-2xl font-semibold tracking-tight transition-colors
+                      ${app.isActive 
+                        ? darkMode ? "text-white" : "text-gray-900" 
+                        : darkMode ? "text-zinc-600" : "text-gray-400"}
+                    `}>
+                      {app.name}
+                    </h2>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openSingleEdit(app);
+                      }}
+                      className={`p-1.5 rounded-full transition-colors ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
+                      title="Edit Application"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                  </div>
                   <div className="flex items-center justify-between gap-4">
                     <p className={`
                       text-xs font-mono px-2 py-1 rounded-lg transition-colors
@@ -770,6 +820,129 @@ export default function App() {
                 >
                   Cancel
                 </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Single App Edit Modal */}
+      <AnimatePresence>
+        {isSingleEditOpen && singleEditApp && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSingleEditOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg z-[70] p-8 rounded-[2.5rem] shadow-2xl transition-colors duration-500 ${darkMode ? "bg-zinc-950 text-white" : "bg-white text-black"}`}
+            >
+              <div className="mb-8">
+                <h2 className="text-2xl font-light tracking-tight">Edit Application</h2>
+                <p className={`text-xs mt-1 ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Configure {singleEditApp.name || "New Application"}</p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2 space-y-1">
+                    <label htmlFor={`single-app-name`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Name</label>
+                    <input 
+                      id={`single-app-name`}
+                      type="text" 
+                      value={singleEditApp.name}
+                      onChange={(e) => updateEditingApp(singleEditApp.id, "name", e.target.value)}
+                      placeholder="Application Name"
+                      className={`w-full bg-transparent border-b focus:outline-none py-1 font-medium transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor={`single-app-port`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Port</label>
+                    <input 
+                      id={`single-app-port`}
+                      type="number" 
+                      value={singleEditApp.port}
+                      onChange={(e) => updateEditingApp(singleEditApp.id, "port", parseInt(e.target.value) || 0)}
+                      className={`w-full bg-transparent border-b focus:outline-none py-1 font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor={`single-app-path`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Path Suffix</label>
+                    <input 
+                      id={`single-app-path`}
+                      type="text" 
+                      value={singleEditApp.path || ""}
+                      onChange={(e) => updateEditingApp(singleEditApp.id, "path", e.target.value)}
+                      className={`w-full bg-transparent border-b focus:outline-none py-1 font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label htmlFor={`single-app-icon`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Icon URL</label>
+                  <input 
+                    id={`single-app-icon`}
+                    type="text" 
+                    value={singleEditApp.iconUrl || ""}
+                    onChange={(e) => updateEditingApp(singleEditApp.id, "iconUrl", e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                    className={`w-full bg-transparent border-b focus:outline-none py-1 text-sm font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-zinc-500" : "border-gray-200 focus:border-black text-gray-500"}`}
+                  />
+                  <div className="flex justify-end">
+                    <button 
+                      onClick={() => lookupIcon(singleEditApp.id, singleEditApp.name)}
+                      className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-colors mt-1 ${darkMode ? "text-zinc-600 hover:text-white" : "text-gray-400 hover:text-black"}`}
+                    >
+                      <Search size={10} />
+                      Lookup on dashboardicons.com
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <div className="flex-1 space-y-1">
+                    <label htmlFor={`single-app-desc`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Description</label>
+                    <input 
+                      id={`single-app-desc`}
+                      type="text" 
+                      value={singleEditApp.description || ""}
+                      onChange={(e) => updateEditingApp(singleEditApp.id, "description", e.target.value)}
+                      placeholder="Description"
+                      className={`w-full bg-transparent border-b focus:outline-none py-1 text-sm transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-zinc-500" : "border-gray-200 focus:border-black text-gray-500"}`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-4">
+                    <input 
+                      type="checkbox" 
+                      id={`single-https`}
+                      checked={singleEditApp.useHttps || false}
+                      onChange={(e) => updateEditingApp(singleEditApp.id, "useHttps", e.target.checked)}
+                      className={`w-4 h-4 rounded focus:ring-black ${darkMode ? "bg-zinc-900 border-zinc-800" : "border-gray-300 text-black"}`}
+                    />
+                    <label htmlFor={`single-https`} className={`text-[10px] font-bold uppercase tracking-wider cursor-pointer ${darkMode ? "text-zinc-500" : "text-gray-500"}`}>HTTPS</label>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={saveSingleApp}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                  >
+                    <Save size={18} />
+                    Save Changes
+                  </button>
+                  <button
+                    onClick={() => setIsSingleEditOpen(false)}
+                    className={`flex-1 py-3 rounded-2xl font-bold border transition-all ${darkMode ? "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white" : "bg-white border-gray-100 text-gray-400 hover:text-black"}`}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
