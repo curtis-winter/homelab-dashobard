@@ -10,7 +10,8 @@ import {
   Trash2, 
   Save, 
   X,
-  Info
+  Info,
+  Search
 } from "lucide-react";
 import { DEFAULT_APPS, DEFAULT_IP, type HomeLabApp } from "./constants";
 
@@ -144,6 +145,39 @@ export default function App() {
 
   const updateEditingApp = (id: string, field: keyof HomeLabApp, value: string | number | boolean) => {
     setEditingApps(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
+  };
+
+  const lookupIcon = async (id: string, name: string) => {
+    if (!name) {
+      alert("Please enter an application name first.");
+      return;
+    }
+    
+    const slug = name.toLowerCase().replace(/\s+/g, '-');
+    const variants = [
+      slug,
+      name.toLowerCase(),
+      slug.replace(/-/g, ''),
+    ];
+    
+    let found = false;
+    for (const variant of variants) {
+      const url = `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/${variant}.png`;
+      try {
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+          updateEditingApp(id, "iconUrl", url);
+          found = true;
+          break;
+        }
+      } catch (e) {
+        // If fetch fails (e.g. CORS), we can't be sure, but jsdelivr usually works
+      }
+    }
+    
+    if (!found) {
+      alert(`Could not find an icon for "${name}" on dashboardicons.com. You might need to find it manually.`);
+    }
   };
 
   const saveSettings = async () => {
@@ -419,6 +453,18 @@ export default function App() {
                               placeholder="https://example.com/logo.png"
                               className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm font-mono text-gray-500"
                             />
+                            <div className="flex justify-end">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  lookupIcon(app.id, app.name);
+                                }}
+                                className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors mt-1"
+                              >
+                                <Search size={10} />
+                                Lookup on dashboardicons.com
+                              </button>
+                            </div>
                           </div>
                           <div className="flex items-center gap-6">
                             <div className="flex-1 space-y-1">
