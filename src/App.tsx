@@ -106,7 +106,8 @@ export default function App() {
 
   // Settings Handlers
   const openSettings = () => {
-    setEditingApps([...apps]);
+    const sorted = [...apps].sort((a, b) => a.name.localeCompare(b.name));
+    setEditingApps(sorted);
     setEditingIp(ip);
     setIsSettingsOpen(true);
   };
@@ -118,7 +119,7 @@ export default function App() {
       port: 80,
       description: "Description"
     };
-    setEditingApps(prev => [...prev, newApp]);
+    setEditingApps(prev => [newApp, ...prev]);
   };
 
   const removeApp = (id: string) => {
