@@ -65,9 +65,10 @@ export default function App() {
   const checkStatus = async (app: HomeLabApp, targetIp: string): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const protocol = app.useHttps ? "https" : "http";
 
     try {
-      await fetch(`http://${targetIp}:${app.port}`, {
+      await fetch(`${protocol}://${targetIp}:${app.port}`, {
         mode: "no-cors",
         signal: controller.signal,
       });
@@ -118,7 +119,8 @@ export default function App() {
       id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
       name: "",
       port: 80,
-      description: ""
+      description: "",
+      useHttps: false
     };
     setEditingApps(prev => [newApp, ...prev]);
     setCurrentlyEditingId(newApp.id);
@@ -140,7 +142,7 @@ export default function App() {
     setCurrentlyEditingId(null);
   };
 
-  const updateEditingApp = (id: string, field: keyof HomeLabApp, value: string | number) => {
+  const updateEditingApp = (id: string, field: keyof HomeLabApp, value: string | number | boolean) => {
     setEditingApps(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
@@ -223,7 +225,7 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                href={`http://${ip}:${app.port}`}
+                href={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`
@@ -398,15 +400,27 @@ export default function App() {
                               />
                             </div>
                           </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Description</label>
-                            <input 
-                              type="text" 
-                              value={app.description || ""}
-                              onChange={(e) => updateEditingApp(app.id, "description", e.target.value)}
-                              placeholder="Description"
-                              className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm text-gray-500"
-                            />
+                          <div className="flex items-center gap-6">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Description</label>
+                              <input 
+                                type="text" 
+                                value={app.description || ""}
+                                onChange={(e) => updateEditingApp(app.id, "description", e.target.value)}
+                                placeholder="Description"
+                                className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm text-gray-500"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 pt-4">
+                              <input 
+                                type="checkbox" 
+                                id={`https-${app.id}`}
+                                checked={app.useHttps || false}
+                                onChange={(e) => updateEditingApp(app.id, "useHttps", e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                              />
+                              <label htmlFor={`https-${app.id}`} className="text-[10px] font-bold text-gray-500 uppercase tracking-wider cursor-pointer">HTTPS</label>
+                            </div>
                           </div>
                           
                           {isEditing ? (
