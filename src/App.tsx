@@ -19,6 +19,7 @@ import { DEFAULT_APPS, DEFAULT_IP, type HomeLabApp } from "./constants";
 interface AppStatus extends HomeLabApp {
   isActive: boolean;
   isChecking: boolean;
+  lastChecked?: Date;
 }
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
   const [currentlyEditingId, setCurrentlyEditingId] = useState<string | null>(null);
   const [scanResults, setScanResults] = useState<{ port: number; name: string; useHttps: boolean; url: string }[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [isLookingUpIcon, setIsLookingUpIcon] = useState<string | null>(null);
   const [customPorts, setCustomPorts] = useState("");
   const [isSingleEditOpen, setIsSingleEditOpen] = useState(false);
   const [singleEditApp, setSingleEditApp] = useState<HomeLabApp | null>(null);
@@ -98,15 +100,16 @@ export default function App() {
   const refreshAll = async () => {
     setAppStatuses(prev => prev.map(app => ({ ...app, isChecking: true })));
     
+    const now = new Date();
     const results = await Promise.all(
       apps.map(async (app) => {
         const isActive = await checkStatus(app, ip);
-        return { ...app, isActive, isChecking: false };
+        return { ...app, isActive, isChecking: false, lastChecked: now };
       })
     );
     
     setAppStatuses(results);
-    setLastUpdated(new Date());
+    setLastUpdated(now);
   };
 
   useEffect(() => {
@@ -235,6 +238,7 @@ export default function App() {
       return;
     }
     
+    setIsLookingUpIcon(id);
     setSettingsError(null);
     const slug = name.toLowerCase().replace(/\s+/g, '-');
     const variants = [
@@ -261,12 +265,13 @@ export default function App() {
     if (!found) {
       setSettingsError(`Could not find an icon for "${name}" on dashboardicons.com.`);
     }
+    setIsLookingUpIcon(null);
   };
 
-  const saveSettings = async () => {
+  const saveConfig = async (newApps: HomeLabApp[], newIp: string) => {
     try {
       setSettingsError(null);
-      const newConfig = { apps: editingApps, ip: editingIp };
+      const newConfig = { apps: newApps, ip: newIp };
       const response = await fetch("/api/config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -274,15 +279,25 @@ export default function App() {
       });
       
       if (response.ok) {
-        setApps(editingApps);
-        setIp(editingIp);
-        setIsSettingsOpen(false);
+        setApps(newApps);
+        setIp(newIp);
+        return true;
       } else {
-        setSettingsError("Failed to save settings to the server.");
+        const data = await response.json();
+        setSettingsError(data.message || "Failed to save settings to the server.");
+        return false;
       }
     } catch (error) {
       console.error("Failed to save config to backend", error);
       setSettingsError("Failed to save settings to the server.");
+      return false;
+    }
+  };
+
+  const saveSettings = async () => {
+    const success = await saveConfig(editingApps, editingIp);
+    if (success) {
+      setIsSettingsOpen(false);
     }
   };
 
@@ -293,27 +308,11 @@ export default function App() {
 
   const saveSingleApp = async () => {
     if (!singleEditApp) return;
-    
-    try {
-      setSettingsError(null);
-      const updatedApps = apps.map(a => a.id === singleEditApp.id ? singleEditApp : a);
-      const newConfig = { apps: updatedApps, ip };
-      const response = await fetch("/api/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newConfig),
-      });
-      
-      if (response.ok) {
-        setApps(updatedApps);
-        setIsSingleEditOpen(false);
-        setSingleEditApp(null);
-      } else {
-        setSettingsError("Failed to save application settings.");
-      }
-    } catch (error) {
-      console.error("Failed to save single app config", error);
-      setSettingsError("Failed to save application settings.");
+    const updatedApps = apps.map(a => a.id === singleEditApp.id ? singleEditApp : a);
+    const success = await saveConfig(updatedApps, ip);
+    if (success) {
+      setIsSingleEditOpen(false);
+      setSingleEditApp(null);
     }
   };
 
@@ -390,15 +389,15 @@ export default function App() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`
-                      group relative flex flex-col p-8 rounded-[2.5rem] transition-all duration-500
+                      group relative flex flex-col p-5 rounded-2xl transition-all duration-500
                       ${darkMode 
                         ? "bg-zinc-900 shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.4)] border border-zinc-800 hover:ring-2 hover:ring-white hover:-translate-y-2"
                         : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.12)] border border-gray-100 hover:ring-2 hover:ring-black hover:-translate-y-2"}
                     `}
                   >
-                    <div className="flex items-center gap-5 mb-8">
+                    <div className="flex items-center gap-5 mb-4">
                       <div className={`
-                        p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden shrink-0
+                        p-3 rounded-2xl transition-all duration-500 flex items-center justify-center overflow-hidden shrink-0
                         ${darkMode ? "bg-zinc-800 text-white" : "bg-gray-50 text-black"}
                       `}>
                         {app.iconUrl ? (
@@ -445,7 +444,7 @@ export default function App() {
                           text-xs font-mono px-2 py-1 rounded-lg transition-colors
                           ${darkMode ? "bg-zinc-800 text-zinc-400" : "bg-gray-100 text-gray-500"}
                         `}>
-                          :{app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
+                          {app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
                         </p>
                         {app.description && (
                           <span className={`
@@ -456,6 +455,11 @@ export default function App() {
                           </span>
                         )}
                       </div>
+                      {app.lastChecked && (
+                        <div className={`mt-2 text-[8px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>
+                          Last checked {app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
                     </div>
                   </motion.a>
                 ))}
@@ -485,15 +489,15 @@ export default function App() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`
-                      group relative flex flex-col p-8 rounded-[2.5rem] transition-all duration-500
+                      group relative flex flex-col p-5 rounded-2xl transition-all duration-500
                       ${darkMode
                         ? "bg-zinc-900/40 border border-dashed border-zinc-800 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"
                         : "bg-gray-100/40 border border-dashed border-gray-200 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"}
                     `}
                   >
-                    <div className="flex items-center gap-5 mb-8">
+                    <div className="flex items-center gap-5 mb-4">
                       <div className={`
-                        p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden shrink-0
+                        p-3 rounded-2xl transition-all duration-500 flex items-center justify-center overflow-hidden shrink-0
                         ${darkMode ? "bg-zinc-800/50 text-zinc-600" : "bg-gray-200/50 text-gray-400"}
                       `}>
                         {app.iconUrl ? (
@@ -540,7 +544,7 @@ export default function App() {
                           text-xs font-mono px-2 py-1 rounded-lg transition-colors
                           ${darkMode ? "bg-zinc-800/30 text-zinc-700 group-hover:text-zinc-400" : "bg-gray-200/30 text-gray-400 group-hover:text-gray-500"}
                         `}>
-                          :{app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
+                          {app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
                         </p>
                         {app.description && (
                           <span className={`
@@ -551,6 +555,11 @@ export default function App() {
                           </span>
                         )}
                       </div>
+                      {app.lastChecked && (
+                        <div className={`mt-2 text-[8px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-800 group-hover:text-zinc-600" : "text-gray-300 group-hover:text-gray-400"}`}>
+                          Last checked {app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
                     </div>
                   </motion.a>
                 ))}
@@ -804,14 +813,15 @@ export default function App() {
                             <div className="flex justify-end">
                               <button 
                                 id={`lookup-icon-${app.id}`}
+                                disabled={isLookingUpIcon === app.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   lookupIcon(app.id, app.name);
                                 }}
                                 className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-colors mt-1 ${darkMode ? "text-zinc-600 hover:text-white" : "text-gray-400 hover:text-black"}`}
                               >
-                                <Search size={10} />
-                                Lookup on dashboardicons.com
+                                <RefreshCw size={10} className={isLookingUpIcon === app.id ? "animate-spin" : ""} />
+                                {isLookingUpIcon === app.id ? "Searching..." : "Lookup on dashboardicons.com"}
                               </button>
                             </div>
                           </div>
@@ -971,11 +981,12 @@ export default function App() {
                   />
                   <div className="flex justify-end">
                     <button 
+                      disabled={isLookingUpIcon === singleEditApp.id}
                       onClick={() => lookupIcon(singleEditApp.id, singleEditApp.name)}
-                      className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-colors mt-1 ${darkMode ? "text-zinc-600 hover:text-white" : "text-gray-400 hover:text-black"}`}
+                      className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-colors mt-1 disabled:opacity-50 ${darkMode ? "text-zinc-600 hover:text-white" : "text-gray-400 hover:text-black"}`}
                     >
-                      <Search size={10} />
-                      Lookup on dashboardicons.com
+                      <RefreshCw size={10} className={isLookingUpIcon === singleEditApp.id ? "animate-spin" : ""} />
+                      {isLookingUpIcon === singleEditApp.id ? "Searching..." : "Lookup on dashboardicons.com"}
                     </button>
                   </div>
                 </div>

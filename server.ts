@@ -29,10 +29,10 @@ const DEFAULT_CONFIG = {
 };
 
 // Load config from file or use defaults
-function loadConfig() {
+async function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
-      const data = fs.readFileSync(CONFIG_FILE, "utf-8");
+      const data = await fs.promises.readFile(CONFIG_FILE, "utf-8");
       console.log(`Config loaded from ${CONFIG_FILE}`);
       return JSON.parse(data);
     } catch (e) {
@@ -45,12 +45,14 @@ function loadConfig() {
 }
 
 // Save config to file
-function saveConfig(config: any) {
+async function saveConfig(config: any) {
   try {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    await fs.promises.writeFile(CONFIG_FILE, JSON.stringify(config, null, 2));
     console.log(`Config saved to ${CONFIG_FILE}`);
+    return true;
   } catch (e) {
     console.error(`Error saving config file at ${CONFIG_FILE}`, e);
+    return false;
   }
 }
 
@@ -62,14 +64,19 @@ async function startServer() {
   app.use(express.json());
 
   // API Routes
-  app.get("/api/config", (req, res) => {
-    res.json(loadConfig());
+  app.get("/api/config", async (req, res) => {
+    const config = await loadConfig();
+    res.json(config);
   });
 
-  app.post("/api/config", (req, res) => {
+  app.post("/api/config", async (req, res) => {
     const newConfig = req.body;
-    saveConfig(newConfig);
-    res.json({ status: "success", config: newConfig });
+    const success = await saveConfig(newConfig);
+    if (success) {
+      res.json({ status: "success", config: newConfig });
+    } else {
+      res.status(500).json({ status: "error", message: "Failed to save configuration" });
+    }
   });
 
   app.get("/api/scan", async (req, res) => {
