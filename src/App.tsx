@@ -123,11 +123,12 @@ export default function App() {
     localStorage.setItem("home-lab-dark-mode", darkMode.toString());
   }, [darkMode]);
 
-  const sortedApps = useMemo(() => {
-    return [...appStatuses].sort((a, b) => {
-      if (a.isActive === b.isActive) return a.name.localeCompare(b.name);
-      return a.isActive ? -1 : 1;
-    });
+  const onlineApps = useMemo(() => {
+    return appStatuses.filter(a => a.isActive).sort((a, b) => a.name.localeCompare(b.name));
+  }, [appStatuses]);
+
+  const offlineApps = useMemo(() => {
+    return appStatuses.filter(a => !a.isActive).sort((a, b) => a.name.localeCompare(b.name));
   }, [appStatuses]);
 
   // Settings Handlers
@@ -368,119 +369,195 @@ export default function App() {
           </motion.div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <AnimatePresence mode="popLayout">
-            {sortedApps.map((app) => (
-              <motion.a
-                key={app.id}
-                id={`app-card-${app.id}`}
-                layout
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                href={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}${app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`
-                  group relative flex flex-col p-8 rounded-[2.5rem] transition-all duration-500
-                  ${app.isActive 
-                    ? darkMode 
-                      ? "bg-zinc-900 shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.4)] border border-zinc-800 hover:ring-2 hover:ring-white hover:-translate-y-2"
-                      : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.12)] border border-gray-100 hover:ring-2 hover:ring-black hover:-translate-y-2" 
-                    : darkMode
-                      ? "bg-zinc-900/40 border border-dashed border-zinc-800 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"
-                      : "bg-gray-100/40 border border-dashed border-gray-200 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"}
-                `}
-              >
-                <div className="flex justify-between items-start mb-8">
-                  <div className={`
-                    p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden
-                    ${app.isActive 
-                      ? darkMode ? "bg-zinc-800 text-white" : "bg-gray-50 text-black" 
-                      : darkMode ? "bg-zinc-800/50 text-zinc-600" : "bg-gray-200/50 text-gray-400"}
-                  `}>
-                    {app.iconUrl ? (
-                      <img 
-                        src={app.iconUrl} 
-                        alt={app.name} 
-                        className={`w-8 h-8 object-contain transition-all duration-500 ${app.isActive ? "" : "opacity-50"}`}
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    <div className={app.iconUrl ? "hidden" : ""}>
-                      <ExternalLink size={24} />
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {app.isChecking ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Checking</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
-                      </div>
-                    ) : app.isActive ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-green-600">Active</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Offline</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-auto">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className={`
-                      text-2xl font-semibold tracking-tight transition-colors
-                      ${app.isActive 
-                        ? darkMode ? "text-white" : "text-gray-900" 
-                        : darkMode ? "text-zinc-600" : "text-gray-400"}
-                    `}>
-                      {app.name}
-                    </h2>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        openSingleEdit(app);
-                      }}
-                      className={`p-1.5 rounded-full transition-colors ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
-                      title="Edit Application"
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <p className={`
-                      text-xs font-mono px-2 py-1 rounded-lg transition-colors
-                      ${app.isActive 
-                        ? darkMode ? "bg-zinc-800 text-zinc-400" : "bg-gray-100 text-gray-500" 
-                        : darkMode ? "bg-zinc-800/30 text-zinc-700" : "bg-gray-200/30 text-gray-400"}
-                    `}>
-                      :{app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
-                    </p>
-                    {app.description && (
-                      <span className={`
-                        text-[10px] uppercase tracking-widest font-bold truncate
-                        ${app.isActive 
-                          ? darkMode ? "text-zinc-500" : "text-gray-300" 
-                          : darkMode ? "text-zinc-700" : "text-gray-200"}
+        {onlineApps.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
+              <h2 className={`text-xs font-black uppercase tracking-[0.3em] ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Online Applications</h2>
+              <div className={`flex-1 h-[1px] ${darkMode ? "bg-zinc-900" : "bg-gray-100"}`} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {onlineApps.map((app) => (
+                  <motion.a
+                    key={app.id}
+                    id={`app-card-${app.id}`}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    href={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}${app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`
+                      group relative flex flex-col p-8 rounded-[2.5rem] transition-all duration-500
+                      ${darkMode 
+                        ? "bg-zinc-900 shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.4)] border border-zinc-800 hover:ring-2 hover:ring-white hover:-translate-y-2"
+                        : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.12)] border border-gray-100 hover:ring-2 hover:ring-black hover:-translate-y-2"}
+                    `}
+                  >
+                    <div className="flex items-center gap-5 mb-8">
+                      <div className={`
+                        p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden shrink-0
+                        ${darkMode ? "bg-zinc-800 text-white" : "bg-gray-50 text-black"}
                       `}>
-                        {app.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </motion.a>
-            ))}
-          </AnimatePresence>
+                        {app.iconUrl ? (
+                          <img 
+                            src={app.iconUrl} 
+                            alt={app.name} 
+                            className="w-8 h-8 object-contain transition-all duration-500"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={app.iconUrl ? "hidden" : ""}>
+                          <ExternalLink size={24} />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h2 className={`
+                          text-2xl font-semibold tracking-tight transition-colors truncate
+                          ${darkMode ? "text-white" : "text-gray-900"}
+                        `}>
+                          {app.name}
+                        </h2>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openSingleEdit(app);
+                          }}
+                          className={`p-1.5 rounded-full transition-colors shrink-0 ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
+                          title="Edit Application"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto">
+                      <div className="flex items-center justify-between gap-4">
+                        <p className={`
+                          text-xs font-mono px-2 py-1 rounded-lg transition-colors
+                          ${darkMode ? "bg-zinc-800 text-zinc-400" : "bg-gray-100 text-gray-500"}
+                        `}>
+                          :{app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
+                        </p>
+                        {app.description && (
+                          <span className={`
+                            text-[10px] uppercase tracking-widest font-bold truncate
+                            ${darkMode ? "text-zinc-500" : "text-gray-300"}
+                          `}>
+                            {app.description}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.a>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
+
+        {offlineApps.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-2 h-2 rounded-full bg-gray-300" />
+              <h2 className={`text-xs font-black uppercase tracking-[0.3em] ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Offline Applications</h2>
+              <div className={`flex-1 h-[1px] ${darkMode ? "bg-zinc-900" : "bg-gray-100"}`} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <AnimatePresence mode="popLayout">
+                {offlineApps.map((app) => (
+                  <motion.a
+                    key={app.id}
+                    id={`app-card-${app.id}`}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    href={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}${app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`
+                      group relative flex flex-col p-8 rounded-[2.5rem] transition-all duration-500
+                      ${darkMode
+                        ? "bg-zinc-900/40 border border-dashed border-zinc-800 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"
+                        : "bg-gray-100/40 border border-dashed border-gray-200 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"}
+                    `}
+                  >
+                    <div className="flex items-center gap-5 mb-8">
+                      <div className={`
+                        p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden shrink-0
+                        ${darkMode ? "bg-zinc-800/50 text-zinc-600" : "bg-gray-200/50 text-gray-400"}
+                      `}>
+                        {app.iconUrl ? (
+                          <img 
+                            src={app.iconUrl} 
+                            alt={app.name} 
+                            className="w-8 h-8 object-contain transition-all duration-500 opacity-50 group-hover:opacity-100"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={app.iconUrl ? "hidden" : ""}>
+                          <ExternalLink size={24} />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 min-w-0">
+                        <h2 className={`
+                          text-2xl font-semibold tracking-tight transition-colors truncate
+                          ${darkMode ? "text-zinc-600 group-hover:text-white" : "text-gray-400 group-hover:text-gray-900"}
+                        `}>
+                          {app.name}
+                        </h2>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openSingleEdit(app);
+                          }}
+                          className={`p-1.5 rounded-full transition-colors shrink-0 ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
+                          title="Edit Application"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto">
+                      <div className="flex items-center justify-between gap-4">
+                        <p className={`
+                          text-xs font-mono px-2 py-1 rounded-lg transition-colors
+                          ${darkMode ? "bg-zinc-800/30 text-zinc-700 group-hover:text-zinc-400" : "bg-gray-200/30 text-gray-400 group-hover:text-gray-500"}
+                        `}>
+                          :{app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
+                        </p>
+                        {app.description && (
+                          <span className={`
+                            text-[10px] uppercase tracking-widest font-bold truncate
+                            ${darkMode ? "text-zinc-700 group-hover:text-zinc-500" : "text-gray-200 group-hover:text-gray-300"}
+                          `}>
+                            {app.description}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.a>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
           
           {apps.length === 0 && (
             <div className={`col-span-full py-20 text-center border-2 border-dashed rounded-[2.5rem] ${darkMode ? "border-zinc-800" : "border-gray-200"}`}>
@@ -490,7 +567,6 @@ export default function App() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Settings Overlay */}
       <AnimatePresence>
