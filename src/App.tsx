@@ -29,6 +29,14 @@ export default function App() {
   const [appStatuses, setAppStatuses] = useState<AppStatus[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("home-lab-dark-mode");
+      return saved === "true";
+    }
+    return false;
+  });
   
   // Settings form state
   const [editingApps, setEditingApps] = useState<HomeLabApp[]>([]);
@@ -99,6 +107,15 @@ export default function App() {
     return () => clearInterval(interval);
   }, [apps, ip]);
 
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    localStorage.setItem("home-lab-dark-mode", darkMode.toString());
+  }, [darkMode]);
+
   const sortedApps = useMemo(() => {
     return [...appStatuses].sort((a, b) => {
       if (a.isActive === b.isActive) return a.name.localeCompare(b.name);
@@ -111,6 +128,7 @@ export default function App() {
     const sorted = [...apps].sort((a, b) => a.name.localeCompare(b.name));
     setEditingApps(sorted);
     setEditingIp(ip);
+    setSettingsError(null);
     setIsSettingsOpen(true);
   };
 
@@ -149,10 +167,11 @@ export default function App() {
 
   const lookupIcon = async (id: string, name: string) => {
     if (!name) {
-      alert("Please enter an application name first.");
+      setSettingsError("Please enter an application name first.");
       return;
     }
     
+    setSettingsError(null);
     const slug = name.toLowerCase().replace(/\s+/g, '-');
     const variants = [
       slug,
@@ -176,12 +195,13 @@ export default function App() {
     }
     
     if (!found) {
-      alert(`Could not find an icon for "${name}" on dashboardicons.com. You might need to find it manually.`);
+      setSettingsError(`Could not find an icon for "${name}" on dashboardicons.com.`);
     }
   };
 
   const saveSettings = async () => {
     try {
+      setSettingsError(null);
       const newConfig = { apps: editingApps, ip: editingIp };
       const response = await fetch("/api/config", {
         method: "POST",
@@ -193,24 +213,26 @@ export default function App() {
         setApps(editingApps);
         setIp(editingIp);
         setIsSettingsOpen(false);
+      } else {
+        setSettingsError("Failed to save settings to the server.");
       }
     } catch (error) {
       console.error("Failed to save config to backend", error);
-      alert("Failed to save settings to the server.");
+      setSettingsError("Failed to save settings to the server.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-[#1a1a1a] font-sans selection:bg-black selection:text-white">
+    <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a] text-white" : "bg-[#f8f9fa] text-[#1a1a1a]"}`}>
       <div className="max-w-6xl mx-auto px-6 md:px-12">
-        <header className="sticky top-0 z-30 pt-12 pb-8 bg-[#f8f9fa]/90 backdrop-blur-md flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8">
+        <header className={`sticky top-0 z-30 pt-12 pb-8 backdrop-blur-md flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8 transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a]/90" : "bg-[#f8f9fa]/90"}`}>
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
             <div className="flex items-center gap-3 text-gray-400 mb-4 group cursor-default">
-              <div className="p-2 bg-white rounded-xl shadow-sm border border-gray-100 group-hover:border-black transition-colors">
-                <Server size={18} className="group-hover:text-black transition-colors" />
+              <div className={`p-2 rounded-xl shadow-sm border transition-colors ${darkMode ? "bg-zinc-900 border-zinc-800 group-hover:border-white" : "bg-white border-gray-100 group-hover:border-black"}`}>
+                <Server size={18} className={`transition-colors ${darkMode ? "group-hover:text-white" : "group-hover:text-black"}`} />
               </div>
               <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Home Lab Infrastructure</span>
             </div>
@@ -218,7 +240,7 @@ export default function App() {
               {ip}
             </h1>
             <div className="flex items-center gap-4">
-              <p className="text-sm text-gray-500 flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-gray-100 shadow-sm">
+              <p className={`text-sm flex items-center gap-2 px-3 py-1 rounded-full border shadow-sm transition-colors ${darkMode ? "bg-zinc-900 border-zinc-800 text-gray-300" : "bg-white border-gray-100 text-gray-500"}`}>
                 <Activity size={14} className="text-green-500" />
                 {appStatuses.filter(a => a.isActive).length} / {apps.length} Online
               </p>
@@ -234,15 +256,17 @@ export default function App() {
             className="flex items-center gap-3"
           >
             <button
+              id="refresh-button"
               onClick={refreshAll}
-              className="p-3 bg-white border border-gray-200 rounded-2xl hover:border-black transition-all shadow-sm active:scale-95"
+              className={`p-3 border rounded-2xl transition-all shadow-sm active:scale-95 ${darkMode ? "bg-zinc-900 border-zinc-800 hover:border-white text-white" : "bg-white border-gray-200 hover:border-black text-black"}`}
               title="Refresh Status"
             >
               <RefreshCw size={20} className={appStatuses.some(a => a.isChecking) ? "animate-spin" : ""} />
             </button>
             <button
+              id="configure-button"
               onClick={openSettings}
-              className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-2xl font-medium hover:bg-gray-800 transition-all shadow-lg shadow-black/10 active:scale-95"
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all shadow-lg active:scale-95 ${darkMode ? "bg-white text-black hover:bg-gray-200 shadow-white/5" : "bg-black text-white hover:bg-gray-800 shadow-black/10"}`}
             >
               <Settings size={18} />
               <span>Configure</span>
@@ -255,6 +279,7 @@ export default function App() {
             {sortedApps.map((app) => (
               <motion.a
                 key={app.id}
+                id={`app-card-${app.id}`}
                 layout
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -265,20 +290,26 @@ export default function App() {
                 className={`
                   group relative flex flex-col p-8 rounded-[2.5rem] transition-all duration-500
                   ${app.isActive 
-                    ? "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgb(0,0,0,0.08)] border border-gray-100" 
-                    : "bg-gray-100/40 border border-dashed border-gray-200 opacity-60 grayscale hover:grayscale-0 hover:opacity-100"}
+                    ? darkMode 
+                      ? "bg-zinc-900 shadow-[0_8px_30px_rgb(0,0,0,0.2)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.4)] border border-zinc-800 hover:ring-2 hover:ring-white hover:-translate-y-2"
+                      : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_30px_60px_rgb(0,0,0,0.12)] border border-gray-100 hover:ring-2 hover:ring-black hover:-translate-y-2" 
+                    : darkMode
+                      ? "bg-zinc-900/40 border border-dashed border-zinc-800 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"
+                      : "bg-gray-100/40 border border-dashed border-gray-200 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:-translate-y-1"}
                 `}
               >
                 <div className="flex justify-between items-start mb-8">
                   <div className={`
                     p-4 rounded-3xl transition-all duration-500 flex items-center justify-center overflow-hidden
-                    ${app.isActive ? "bg-gray-50 text-black group-hover:bg-black group-hover:text-white" : "bg-gray-200/50 text-gray-400"}
+                    ${app.isActive 
+                      ? darkMode ? "bg-zinc-800 text-white" : "bg-gray-50 text-black" 
+                      : darkMode ? "bg-zinc-800/50 text-zinc-600" : "bg-gray-200/50 text-gray-400"}
                   `}>
                     {app.iconUrl ? (
                       <img 
                         src={app.iconUrl} 
                         alt={app.name} 
-                        className={`w-8 h-8 object-contain transition-all duration-500 ${app.isActive ? "group-hover:invert group-hover:brightness-0 group-hover:contrast-100" : "opacity-50"}`}
+                        className={`w-8 h-8 object-contain transition-all duration-500 ${app.isActive ? "" : "opacity-50"}`}
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
@@ -313,21 +344,27 @@ export default function App() {
                 <div className="mt-auto">
                   <h2 className={`
                     text-2xl font-semibold mb-2 tracking-tight transition-colors
-                    ${app.isActive ? "text-gray-900" : "text-gray-400"}
+                    ${app.isActive 
+                      ? darkMode ? "text-white" : "text-gray-900" 
+                      : darkMode ? "text-zinc-600" : "text-gray-400"}
                   `}>
                     {app.name}
                   </h2>
                   <div className="flex items-center justify-between gap-4">
                     <p className={`
                       text-xs font-mono px-2 py-1 rounded-lg transition-colors
-                      ${app.isActive ? "bg-gray-100 text-gray-500" : "bg-gray-200/30 text-gray-400"}
+                      ${app.isActive 
+                        ? darkMode ? "bg-zinc-800 text-zinc-400" : "bg-gray-100 text-gray-500" 
+                        : darkMode ? "bg-zinc-800/30 text-zinc-700" : "bg-gray-200/30 text-gray-400"}
                     `}>
                       :{app.port}
                     </p>
                     {app.description && (
                       <span className={`
                         text-[10px] uppercase tracking-widest font-bold truncate
-                        ${app.isActive ? "text-gray-300" : "text-gray-200"}
+                        ${app.isActive 
+                          ? darkMode ? "text-zinc-500" : "text-gray-300" 
+                          : darkMode ? "text-zinc-700" : "text-gray-200"}
                       `}>
                         {app.description}
                       </span>
@@ -339,10 +376,10 @@ export default function App() {
           </AnimatePresence>
           
           {apps.length === 0 && (
-            <div className="col-span-full py-20 text-center border-2 border-dashed border-gray-200 rounded-[2.5rem]">
-              <Info className="mx-auto mb-4 text-gray-300" size={48} />
-              <p className="text-gray-400 font-medium">No applications configured.</p>
-              <button onClick={openSettings} className="mt-4 text-black underline font-bold text-sm">Open Configuration</button>
+            <div className={`col-span-full py-20 text-center border-2 border-dashed rounded-[2.5rem] ${darkMode ? "border-zinc-800" : "border-gray-200"}`}>
+              <Info className={`mx-auto mb-4 ${darkMode ? "text-zinc-700" : "text-gray-300"}`} size={48} />
+              <p className={`${darkMode ? "text-zinc-500" : "text-gray-400"} font-medium`}>No applications configured.</p>
+              <button onClick={openSettings} className={`mt-4 underline font-bold text-sm ${darkMode ? "text-white" : "text-black"}`}>Open Configuration</button>
             </div>
           )}
         </div>
@@ -364,44 +401,78 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-white z-50 shadow-2xl flex flex-col"
+              className={`fixed right-0 top-0 bottom-0 w-full max-w-2xl z-50 shadow-2xl flex flex-col transition-colors duration-500 ${darkMode ? "bg-zinc-950 text-white" : "bg-white text-black"}`}
             >
-              <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+              <div className={`p-8 border-b flex items-center justify-between ${darkMode ? "border-zinc-900" : "border-gray-100"}`}>
                 <div>
                   <h2 className="text-3xl font-light tracking-tight">Configuration</h2>
-                  <p className="text-sm text-gray-400 mt-1">Manage your home lab endpoints</p>
+                  <p className={`text-sm mt-1 ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Manage your home lab endpoints</p>
                 </div>
                 <button 
                   onClick={() => setIsSettingsOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                  className={`p-2 rounded-xl transition-colors ${darkMode ? "hover:bg-zinc-900" : "hover:bg-gray-100"}`}
                 >
                   <X size={24} />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-12">
+                {settingsError && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-4 border rounded-2xl flex items-center gap-3 text-sm ${darkMode ? "bg-red-950/20 border-red-900/50 text-red-400" : "bg-red-50 border-red-100 text-red-600"}`}
+                  >
+                    <Info size={18} />
+                    <span>{settingsError}</span>
+                  </motion.div>
+                )}
+                
                 <section>
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-6">Server Settings</h3>
-                  <div className="space-y-4">
+                  <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] mb-6 ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Server Settings</h3>
+                  <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Node IP Address</label>
+                      <label htmlFor="server-ip-input" className={`text-xs font-bold uppercase tracking-wider ${darkMode ? "text-zinc-500" : "text-gray-500"}`}>Node IP Address</label>
                       <input 
+                        id="server-ip-input"
                         type="text" 
                         value={editingIp}
                         onChange={(e) => setEditingIp(e.target.value)}
-                        className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-lg font-mono"
+                        className={`w-full p-4 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black transition-all text-lg font-mono ${darkMode ? "bg-zinc-900 border-zinc-800 text-white focus:border-white" : "bg-gray-50 border-gray-100 text-black"}`}
                         placeholder="e.g. 10.0.0.134"
                       />
+                    </div>
+
+                    <div className={`p-6 rounded-3xl border flex items-center justify-between transition-colors ${darkMode ? "bg-zinc-900 border-zinc-800" : "bg-gray-50 border-gray-100"}`}>
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl ${darkMode ? "bg-zinc-800 text-white" : "bg-white text-black shadow-sm"}`}>
+                          <Activity size={20} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">Dark Mode</p>
+                          <p className={`text-[10px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Local appearance setting</p>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => setDarkMode(!darkMode)}
+                        className={`relative w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none ${darkMode ? "bg-white" : "bg-zinc-200"}`}
+                      >
+                        <motion.div 
+                          animate={{ x: darkMode ? 26 : 4 }}
+                          className={`absolute top-1 w-6 h-6 rounded-full shadow-md ${darkMode ? "bg-black" : "bg-white"}`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </section>
 
                 <section>
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Applications</h3>
+                    <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Applications</h3>
                     <button 
+                      id="add-app-button"
                       onClick={addApp}
-                      className="flex items-center gap-2 text-xs font-bold bg-gray-100 hover:bg-black hover:text-white px-4 py-2 rounded-xl transition-all"
+                      className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all ${darkMode ? "bg-zinc-900 text-white hover:bg-white hover:text-black" : "bg-gray-100 text-black hover:bg-black hover:text-white"}`}
                     >
                       <Plus size={14} />
                       Add App
@@ -418,48 +489,53 @@ export default function App() {
                           className={`
                             p-6 rounded-3xl border transition-all duration-300 group relative
                             ${isEditing 
-                              ? "bg-white border-black shadow-xl scale-[1.02] z-10" 
-                              : "bg-gray-50 border-gray-100 hover:border-gray-300 cursor-pointer"}
+                              ? darkMode ? "bg-zinc-900 border-white shadow-xl scale-[1.02] z-10" : "bg-white border-black shadow-xl scale-[1.02] z-10" 
+                              : darkMode ? "bg-zinc-900/50 border-zinc-900 hover:border-zinc-700 cursor-pointer" : "bg-gray-50 border-gray-100 hover:border-gray-300 cursor-pointer"}
                           `}
+                          id={`editing-app-${app.id}`}
                         >
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="md:col-span-2 space-y-1">
-                              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Name</label>
+                              <label htmlFor={`app-name-${app.id}`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Name</label>
                               <input 
+                                id={`app-name-${app.id}`}
                                 type="text" 
                                 value={app.name}
                                 autoFocus={isEditing && app.name === ""}
                                 onChange={(e) => updateEditingApp(app.id, "name", e.target.value)}
                                 placeholder="Application Name"
-                                className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-medium"
+                                className={`w-full bg-transparent border-b focus:outline-none py-1 font-medium transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Port</label>
+                              <label htmlFor={`app-port-${app.id}`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Port</label>
                               <input 
+                                id={`app-port-${app.id}`}
                                 type="number" 
                                 value={app.port}
                                 onChange={(e) => updateEditingApp(app.id, "port", parseInt(e.target.value) || 0)}
-                                className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 font-mono"
+                                className={`w-full bg-transparent border-b focus:outline-none py-1 font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-white" : "border-gray-200 focus:border-black text-black"}`}
                               />
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Icon URL</label>
+                            <label htmlFor={`app-icon-${app.id}`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Icon URL</label>
                             <input 
+                              id={`app-icon-${app.id}`}
                               type="text" 
                               value={app.iconUrl || ""}
                               onChange={(e) => updateEditingApp(app.id, "iconUrl", e.target.value)}
                               placeholder="https://example.com/logo.png"
-                              className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm font-mono text-gray-500"
+                              className={`w-full bg-transparent border-b focus:outline-none py-1 text-sm font-mono transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-zinc-500" : "border-gray-200 focus:border-black text-gray-500"}`}
                             />
                             <div className="flex justify-end">
                               <button 
+                                id={`lookup-icon-${app.id}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   lookupIcon(app.id, app.name);
                                 }}
-                                className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-colors mt-1"
+                                className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-colors mt-1 ${darkMode ? "text-zinc-600 hover:text-white" : "text-gray-400 hover:text-black"}`}
                               >
                                 <Search size={10} />
                                 Lookup on dashboardicons.com
@@ -468,13 +544,14 @@ export default function App() {
                           </div>
                           <div className="flex items-center gap-6">
                             <div className="flex-1 space-y-1">
-                              <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Description</label>
+                              <label htmlFor={`app-desc-${app.id}`} className={`text-[9px] font-bold uppercase tracking-widest ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Description</label>
                               <input 
+                                id={`app-desc-${app.id}`}
                                 type="text" 
                                 value={app.description || ""}
                                 onChange={(e) => updateEditingApp(app.id, "description", e.target.value)}
                                 placeholder="Description"
-                                className="w-full bg-transparent border-b border-gray-200 focus:border-black focus:outline-none py-1 text-sm text-gray-500"
+                                className={`w-full bg-transparent border-b focus:outline-none py-1 text-sm transition-colors ${darkMode ? "border-zinc-800 focus:border-white text-zinc-500" : "border-gray-200 focus:border-black text-gray-500"}`}
                               />
                             </div>
                             <div className="flex items-center gap-2 pt-4">
@@ -483,9 +560,9 @@ export default function App() {
                                 id={`https-${app.id}`}
                                 checked={app.useHttps || false}
                                 onChange={(e) => updateEditingApp(app.id, "useHttps", e.target.checked)}
-                                className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                                className={`w-4 h-4 rounded focus:ring-black ${darkMode ? "bg-zinc-900 border-zinc-800" : "border-gray-300 text-black"}`}
                               />
-                              <label htmlFor={`https-${app.id}`} className="text-[10px] font-bold text-gray-500 uppercase tracking-wider cursor-pointer">HTTPS</label>
+                              <label htmlFor={`https-${app.id}`} className={`text-[10px] font-bold uppercase tracking-wider cursor-pointer ${darkMode ? "text-zinc-500" : "text-gray-500"}`}>HTTPS</label>
                             </div>
                           </div>
                           
@@ -496,7 +573,7 @@ export default function App() {
                                   e.stopPropagation();
                                   setCurrentlyEditingId(null);
                                 }}
-                                className="p-2 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-all"
+                                className={`p-2 rounded-full shadow-lg transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
                                 title="Confirm Edit"
                               >
                                 <Save size={14} />
@@ -506,7 +583,7 @@ export default function App() {
                                   e.stopPropagation();
                                   discardAppEdit(app.id);
                                 }}
-                                className="p-2 bg-white text-gray-400 rounded-full shadow-lg border border-gray-200 hover:text-red-500 hover:border-red-200 transition-all"
+                                className={`p-2 rounded-full shadow-lg border transition-all ${darkMode ? "bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-red-400 hover:border-red-900" : "bg-white text-gray-400 border-gray-200 hover:text-red-500 hover:border-red-200"}`}
                                 title="Discard Changes"
                               >
                                 <X size={14} />
@@ -518,7 +595,7 @@ export default function App() {
                                 e.stopPropagation();
                                 removeApp(app.id);
                               }}
-                              className="absolute -top-2 -right-2 p-2 bg-white text-red-500 rounded-full shadow-md border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                              className={`absolute -top-2 -right-2 p-2 rounded-full shadow-md border opacity-0 group-hover:opacity-100 transition-opacity ${darkMode ? "bg-zinc-900 text-red-400 border-zinc-800 hover:bg-red-950/30" : "bg-white text-red-500 border-gray-100 hover:bg-red-50"}`}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -530,17 +607,19 @@ export default function App() {
                 </section>
               </div>
 
-              <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex gap-4">
+              <div className={`p-8 border-t flex gap-4 ${darkMode ? "border-zinc-900 bg-zinc-950/50" : "border-gray-100 bg-gray-50/50"}`}>
                 <button 
+                  id="save-settings-button"
                   onClick={saveSettings}
-                  className="flex-1 flex items-center justify-center gap-2 py-4 bg-black text-white rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-xl shadow-black/10 active:scale-95"
+                  className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold transition-all shadow-xl active:scale-95 ${darkMode ? "bg-white text-black hover:bg-gray-200 shadow-white/5" : "bg-black text-white hover:bg-gray-800 shadow-black/10"}`}
                 >
                   <Save size={18} />
                   Save Changes
                 </button>
                 <button 
+                  id="cancel-settings-button"
                   onClick={() => setIsSettingsOpen(false)}
-                  className="px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold hover:bg-gray-100 transition-all active:scale-95"
+                  className={`px-8 py-4 border rounded-2xl font-bold transition-all active:scale-95 ${darkMode ? "bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800" : "bg-white border-gray-200 text-black hover:bg-gray-100"}`}
                 >
                   Cancel
                 </button>

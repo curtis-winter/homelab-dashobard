@@ -32,18 +32,26 @@ const DEFAULT_CONFIG = {
 function loadConfig() {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
-      return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+      const data = fs.readFileSync(CONFIG_FILE, "utf-8");
+      console.log(`Config loaded from ${CONFIG_FILE}`);
+      return JSON.parse(data);
     } catch (e) {
-      console.error("Error reading config file, using defaults", e);
+      console.error(`Error reading config file at ${CONFIG_FILE}, using defaults`, e);
       return DEFAULT_CONFIG;
     }
   }
+  console.log("Config file not found, using defaults");
   return DEFAULT_CONFIG;
 }
 
 // Save config to file
 function saveConfig(config: any) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    console.log(`Config saved to ${CONFIG_FILE}`);
+  } catch (e) {
+    console.error(`Error saving config file at ${CONFIG_FILE}`, e);
+  }
 }
 
 async function startServer() {
