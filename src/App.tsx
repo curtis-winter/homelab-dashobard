@@ -44,6 +44,7 @@ export default function App() {
   const [currentlyEditingId, setCurrentlyEditingId] = useState<string | null>(null);
   const [scanResults, setScanResults] = useState<{ port: number; name: string; useHttps: boolean; url: string }[]>([]);
   const [isScanning, setIsScanning] = useState(false);
+  const [customPorts, setCustomPorts] = useState("");
 
   // Fetch config from backend on mount
   useEffect(() => {
@@ -132,6 +133,7 @@ export default function App() {
     setEditingIp(ip);
     setSettingsError(null);
     setScanResults([]);
+    setCustomPorts("");
     setIsSettingsOpen(true);
   };
 
@@ -159,7 +161,8 @@ export default function App() {
     setSettingsError(null);
     
     try {
-      const response = await fetch(`/api/scan?ip=${editingIp}`);
+      const url = `/api/scan?ip=${editingIp}${customPorts ? `&ports=${encodeURIComponent(customPorts)}` : ""}`;
+      const response = await fetch(url);
       if (response.ok) {
         const results = await response.json();
         // Filter out apps that are already in editingApps
@@ -168,7 +171,7 @@ export default function App() {
         );
         setScanResults(filteredResults);
         if (filteredResults.length === 0) {
-          setSettingsError("No new applications found on common ports.");
+          setSettingsError("No new applications found on the specified ports.");
         }
       } else {
         setSettingsError("Failed to scan ports. Make sure the Node IP is reachable from the server.");
@@ -523,18 +526,9 @@ export default function App() {
                 </section>
 
                 <section>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Applications</h3>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        id="scan-ports-button"
-                        onClick={handleScan}
-                        disabled={isScanning}
-                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all disabled:opacity-50 ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700" : "bg-gray-100 text-black hover:bg-gray-200"}`}
-                      >
-                        <RefreshCw size={14} className={isScanning ? "animate-spin" : ""} />
-                        {isScanning ? "Scanning..." : "Scan Ports"}
-                      </button>
+                  <div className="flex flex-col gap-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className={`text-[10px] font-black uppercase tracking-[0.2em] ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>Applications</h3>
                       <button 
                         id="add-app-button"
                         onClick={addApp}
@@ -544,6 +538,31 @@ export default function App() {
                         Add App
                       </button>
                     </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input 
+                          type="text"
+                          value={customPorts}
+                          onChange={(e) => setCustomPorts(e.target.value)}
+                          placeholder="Custom ports (e.g. 80,443 or 8000-8100)"
+                          className={`w-full pl-10 pr-4 py-2 rounded-xl border text-xs transition-all focus:outline-none focus:ring-2 focus:ring-black/5 ${darkMode ? "bg-zinc-900 border-zinc-800 text-white focus:border-white" : "bg-gray-50 border-gray-100 text-black focus:border-black"}`}
+                        />
+                        <Search size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${darkMode ? "text-zinc-600" : "text-gray-400"}`} />
+                      </div>
+                      <button 
+                        id="scan-ports-button"
+                        onClick={handleScan}
+                        disabled={isScanning}
+                        className={`flex items-center gap-2 text-xs font-bold px-6 py-2 rounded-xl transition-all disabled:opacity-50 whitespace-nowrap ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700" : "bg-gray-100 text-black hover:bg-gray-200"}`}
+                      >
+                        <RefreshCw size={14} className={isScanning ? "animate-spin" : ""} />
+                        {isScanning ? "Scanning..." : "Scan Ports"}
+                      </button>
+                    </div>
+                    <p className={`text-[9px] font-medium ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>
+                      Leave empty to scan common ports. Max 100 ports per scan.
+                    </p>
                   </div>
 
                   <AnimatePresence>
@@ -564,7 +583,18 @@ export default function App() {
                                     <Activity size={14} />
                                   </div>
                                   <div>
-                                    <p className="text-xs font-bold">{result.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-bold">{result.name}</p>
+                                      <a 
+                                        href={result.url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className={`p-1 rounded-md transition-colors ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
+                                        title="Open landing page"
+                                      >
+                                        <ExternalLink size={10} />
+                                      </a>
+                                    </div>
                                     <p className={`text-[9px] font-mono ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Port {result.port} • {result.useHttps ? "HTTPS" : "HTTP"}</p>
                                   </div>
                                 </div>
