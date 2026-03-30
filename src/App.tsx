@@ -113,20 +113,20 @@ export default function App() {
 
   const addApp = () => {
     const newApp: HomeLabApp = {
-      id: crypto.randomUUID(),
+      id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Date.now().toString(),
       name: "New Application",
       port: 80,
       description: "Description"
     };
-    setEditingApps([...editingApps, newApp]);
+    setEditingApps(prev => [...prev, newApp]);
   };
 
   const removeApp = (id: string) => {
-    setEditingApps(editingApps.filter(a => a.id !== id));
+    setEditingApps(prev => prev.filter(a => a.id !== id));
   };
 
   const updateEditingApp = (id: string, field: keyof HomeLabApp, value: string | number) => {
-    setEditingApps(editingApps.map(a => a.id === id ? { ...a, [field]: value } : a));
+    setEditingApps(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
   const saveSettings = async () => {
