@@ -13,7 +13,7 @@ import {
   ChevronRight,
   Info
 } from "lucide-react";
-import { DEFAULT_APPS, DEFAULT_IP, STORAGE_KEYS, type HomeLabApp } from "./constants";
+import { DEFAULT_APPS, DEFAULT_IP, type HomeLabApp } from "./constants";
 
 interface AppStatus extends HomeLabApp {
   isActive: boolean;
@@ -22,14 +22,9 @@ interface AppStatus extends HomeLabApp {
 
 export default function App() {
   // Load initial state from localStorage or defaults
-  const [apps, setApps] = useState<HomeLabApp[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.APPS);
-    return saved ? JSON.parse(saved) : DEFAULT_APPS;
-  });
-  
-  const [ip, setIp] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEYS.IP) || DEFAULT_IP;
-  });
+  const [apps, setApps] = useState<HomeLabApp[]>(DEFAULT_APPS);
+  const [ip, setIp] = useState<string>(DEFAULT_IP);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [appStatuses, setAppStatuses] = useState<AppStatus[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -39,11 +34,32 @@ export default function App() {
   const [editingApps, setEditingApps] = useState<HomeLabApp[]>([]);
   const [editingIp, setEditingIp] = useState("");
 
+  // Fetch config from backend on mount
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch("/api/config");
+        if (response.ok) {
+          const data = await response.json();
+          setApps(data.apps);
+          setIp(data.ip);
+        }
+      } catch (error) {
+        console.error("Failed to fetch config from backend, using defaults", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchConfig();
+  }, []);
+
   // Initialize statuses when apps change
   useEffect(() => {
-    setAppStatuses(apps.map(app => ({ ...app, isActive: false, isChecking: true })));
-    refreshAll();
-  }, [apps, ip]);
+    if (!isLoading) {
+      setAppStatuses(apps.map(app => ({ ...app, isActive: false, isChecking: true })));
+      refreshAll();
+    }
+  }, [apps, ip, isLoading]);
 
   const checkStatus = async (app: HomeLabApp, targetIp: string): Promise<boolean> => {
     const controller = new AbortController();
@@ -113,12 +129,24 @@ export default function App() {
     setEditingApps(editingApps.map(a => a.id === id ? { ...a, [field]: value } : a));
   };
 
-  const saveSettings = () => {
-    setApps(editingApps);
-    setIp(editingIp);
-    localStorage.setItem(STORAGE_KEYS.APPS, JSON.stringify(editingApps));
-    localStorage.setItem(STORAGE_KEYS.IP, editingIp);
-    setIsSettingsOpen(false);
+  const saveSettings = async () => {
+    try {
+      const newConfig = { apps: editingApps, ip: editingIp };
+      const response = await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newConfig),
+      });
+      
+      if (response.ok) {
+        setApps(editingApps);
+        setIp(editingIp);
+        setIsSettingsOpen(false);
+      }
+    } catch (error) {
+      console.error("Failed to save config to backend", error);
+      alert("Failed to save settings to the server.");
+    }
   };
 
   return (

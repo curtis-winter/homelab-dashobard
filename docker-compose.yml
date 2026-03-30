@@ -3,10 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - VITE_HOME_LAB_IP=10.0.0.134
     ports:
-      - "8080:80"
+      - "8080:3000"
+    volumes:
+      - ./data:/app/data
     restart: unless-stopped
     environment:
       - NODE_ENV=production

@@ -10,22 +10,27 @@ RUN npm install
 # Copy source files
 COPY . .
 
-# Build the application
-# Note: VITE_ variables must be present at build time for SPAs
-ARG VITE_HOME_LAB_IP=10.0.0.134
-ENV VITE_HOME_LAB_IP=$VITE_HOME_LAB_IP
-
+# Build the React application
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Copy built assets from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+WORKDIR /app
 
-# Copy custom nginx config if needed (optional)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy package files and install production dependencies
+COPY package*.json ./
+RUN npm install --omit=dev
 
-EXPOSE 80
+# Copy built assets and server code
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/server.ts ./server.ts
+COPY --from=build /app/src/constants.ts ./src/constants.ts
 
-CMD ["nginx", "-g", "daemon off;"]
+# Create data directory for persistence
+RUN mkdir -p data
+
+EXPOSE 3000
+
+# Start the server
+CMD ["npm", "start"]

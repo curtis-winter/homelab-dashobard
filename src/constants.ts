@@ -18,8 +18,3 @@ export const DEFAULT_APPS: HomeLabApp[] = [
   { id: "agregarr", name: "Agregarr", port: 7171, description: "Plex Collection Manager" },
   { id: "audiobookshelf", name: "Audiobookshelf", port: 13379, description: "Audiobook Management" },
 ];
-
-export const STORAGE_KEYS = {
-  APPS: "homelab_apps",
-  IP: "homelab_ip",
-};

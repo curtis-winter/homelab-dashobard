@@ -6,7 +6,8 @@ A minimalist, modern dashboard to monitor the status of your Home Lab applicatio
 
 - **Real-time Status Monitoring**: Automatically checks if your applications are online.
 - **Dynamic Configuration**: Add, remove, and edit applications directly from the UI.
-- **Persistence**: Your settings (IP address and application list) are saved in your browser's local storage.
+- **Server-Side Persistence**: Your settings (IP address and application list) are saved on the server in a `data/config.json` file.
+- **Cross-Device Sync**: Access the same dashboard configuration from any device on your network.
 - **Modern UI**: Clean, minimalist design with smooth animations.
 
 ## Getting Started
@@ -24,15 +25,12 @@ A minimalist, modern dashboard to monitor the status of your Home Lab applicatio
     cd homelab-dashboard
     ```
 
-2.  **Configure the default IP (Optional)**:
-    Open `docker-compose.yml` and update the `VITE_HOME_LAB_IP` build argument to your Home Lab's IP address. This will be the default IP for the first time you open the dashboard.
-
-3.  **Start the dashboard**:
+2.  **Start the dashboard**:
     ```bash
     docker compose up -d --build
     ```
 
-4.  **Access the dashboard**:
+3.  **Access the dashboard**:
     Open your browser and navigate to `http://localhost:8080`.
 
 ## Configuration
@@ -43,7 +41,7 @@ Click the **Settings** (gear) icon in the top-right corner to:
 - **Edit** existing applications.
 - **Remove** applications you no longer need.
 
-All changes are saved automatically to your browser's local storage.
+All changes are saved automatically to the server's `data/config.json` file. This file is mounted as a volume in Docker, so your settings persist even if you upgrade or restart the container.
 
 ## Note on Private Network Access (PNA)
 
