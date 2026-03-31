@@ -327,7 +327,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a] text-white" : "bg-[#f8f9fa] text-[#1a1a1a]"}`}>
+    <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "text-white" : "text-[#1a1a1a]"}`}>
       <div className="max-w-6xl mx-auto px-6 md:px-12">
         <header className={`sticky top-0 z-30 pt-12 pb-8 backdrop-blur-md flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8 transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a]/90" : "bg-[#f8f9fa]/90"}`}>
           <motion.div 
@@ -427,24 +427,34 @@ export default function App() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h2 className={`
-                          text-2xl font-semibold tracking-tight transition-colors truncate
-                          ${darkMode ? "text-white" : "text-gray-900"}
-                        `}>
-                          {app.name}
-                        </h2>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openSingleEdit(app);
-                          }}
-                          className={`p-1.5 rounded-full transition-colors shrink-0 ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
-                          title="Edit Application"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className={`
+                            text-2xl font-semibold tracking-tight transition-colors truncate
+                            ${darkMode ? "text-white" : "text-gray-900"}
+                          `}>
+                            {app.name}
+                          </h2>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openSingleEdit(app);
+                            }}
+                            className={`p-1.5 rounded-full transition-colors shrink-0 ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
+                            title="Edit Application"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        </div>
+                        {app.description && (
+                          <span className={`
+                            text-[10px] uppercase tracking-widest font-bold truncate
+                            ${darkMode ? "text-zinc-500" : "text-gray-400"}
+                          `}>
+                            {app.description}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -456,20 +466,12 @@ export default function App() {
                         `}>
                           {app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
                         </p>
-                        {app.description && (
-                          <span className={`
-                            text-[10px] uppercase tracking-widest font-bold truncate
-                            ${darkMode ? "text-zinc-500" : "text-gray-300"}
-                          `}>
-                            {app.description}
-                          </span>
+                        {app.lastChecked && (
+                          <div className={`text-[8px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>
+                            Last checked {app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         )}
                       </div>
-                      {app.lastChecked && (
-                        <div className={`mt-2 text-[8px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-600" : "text-gray-400"}`}>
-                          Last checked {app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      )}
                     </div>
                   </motion.a>
                 ))}
@@ -527,24 +529,34 @@ export default function App() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h2 className={`
-                          text-2xl font-semibold tracking-tight transition-colors truncate
-                          ${darkMode ? "text-zinc-600 group-hover:text-white" : "text-gray-400 group-hover:text-gray-900"}
-                        `}>
-                          {app.name}
-                        </h2>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            openSingleEdit(app);
-                          }}
-                          className={`p-1.5 rounded-full transition-colors shrink-0 ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
-                          title="Edit Application"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h2 className={`
+                            text-2xl font-semibold tracking-tight transition-colors truncate
+                            ${darkMode ? "text-zinc-600 group-hover:text-white" : "text-gray-400 group-hover:text-gray-900"}
+                          `}>
+                            {app.name}
+                          </h2>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openSingleEdit(app);
+                            }}
+                            className={`p-1.5 rounded-full transition-colors shrink-0 ${darkMode ? "hover:bg-zinc-800 text-zinc-500 hover:text-white" : "hover:bg-gray-100 text-gray-400 hover:text-black"}`}
+                            title="Edit Application"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        </div>
+                        {app.description && (
+                          <span className={`
+                            text-[10px] uppercase tracking-widest font-bold truncate
+                            ${darkMode ? "text-zinc-600" : "text-gray-400"}
+                          `}>
+                            {app.description}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -556,20 +568,12 @@ export default function App() {
                         `}>
                           {app.port}{app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}
                         </p>
-                        {app.description && (
-                          <span className={`
-                            text-[10px] uppercase tracking-widest font-bold truncate
-                            ${darkMode ? "text-zinc-700 group-hover:text-zinc-500" : "text-gray-200 group-hover:text-gray-300"}
-                          `}>
-                            {app.description}
-                          </span>
+                        {app.lastChecked && (
+                          <div className={`text-[8px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-800 group-hover:text-zinc-600" : "text-gray-300 group-hover:text-gray-400"}`}>
+                            Last checked {app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         )}
                       </div>
-                      {app.lastChecked && (
-                        <div className={`mt-2 text-[8px] uppercase tracking-widest font-medium ${darkMode ? "text-zinc-800 group-hover:text-zinc-600" : "text-gray-300 group-hover:text-gray-400"}`}>
-                          Last checked {app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      )}
                     </div>
                   </motion.a>
                 ))}
@@ -603,7 +607,7 @@ export default function App() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className={`fixed right-0 top-0 bottom-0 w-full max-w-2xl z-50 shadow-2xl flex flex-col transition-colors duration-500 ${darkMode ? "bg-zinc-950 text-white" : "bg-white text-black"}`}
+              className={`fixed right-0 top-0 bottom-0 w-full max-w-2xl z-50 shadow-2xl flex flex-col transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"}`}
             >
               <div className={`p-8 border-b flex items-center justify-between ${darkMode ? "border-zinc-900" : "border-gray-100"}`}>
                 <div>
@@ -937,7 +941,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg z-[70] p-8 rounded-[2.5rem] shadow-2xl transition-colors duration-500 ${darkMode ? "bg-zinc-950 text-white" : "bg-white text-black"}`}
+              className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg z-[70] p-8 rounded-[2.5rem] shadow-2xl transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a] text-white" : "bg-white text-black"}`}
             >
               <div className="mb-8">
                 <h2 className="text-2xl font-light tracking-tight">Edit Application</h2>
