@@ -430,7 +430,7 @@ export default function App() {
                     key={app.id}
                     app={app}
                     appUrl={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}${app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}`}
-                    lastChecked={app.lastChecked ? app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null}
+                    lastChecked={app.lastChecked instanceof Date ? app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null}
                     isOnline={true}
                     onEdit={() => openSingleEdit(app)}
                     darkMode={darkMode}
@@ -455,7 +455,7 @@ export default function App() {
                     key={app.id}
                     app={app}
                     appUrl={`${app.useHttps ? "https" : "http"}://${ip}:${app.port}${app.path ? (app.path.startsWith('/') ? app.path : `/${app.path}`) : ""}`}
-                    lastChecked={app.lastChecked ? app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null}
+                    lastChecked={app.lastChecked instanceof Date ? app.lastChecked.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null}
                     isOnline={false}
                     onEdit={() => openSingleEdit(app)}
                     darkMode={darkMode}

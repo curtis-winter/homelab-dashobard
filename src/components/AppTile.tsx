@@ -41,8 +41,8 @@ export const AppTile: React.FC<AppTileProps> = ({ app, appUrl, lastChecked, isOn
           darkMode ? "bg-zinc-800 border-zinc-700" : "bg-gray-50 border-gray-100"
         }`}>
           <img 
-            src={app.iconUrl || (app.id ? `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/${app.id.toLowerCase()}.png` : "")}
-            alt={app.name}
+            src={app.iconUrl || (app.id && typeof app.id === 'string' ? `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/${app.id.toLowerCase()}.png` : "")}
+            alt={app.name || "App"}
             className="w-10 h-10 object-contain"
             referrerPolicy="no-referrer"
             onError={(e) => {
