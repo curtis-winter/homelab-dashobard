@@ -27,6 +27,7 @@ import { DEFAULT_APPS, DEFAULT_IP, type HomeLabApp } from "./constants";
 import { AppTile } from "./components/AppTile";
 import { Input } from "./components/Input";
 import { Modal } from "./components/Modal";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 interface AppStatus extends HomeLabApp {
   isActive: boolean;
@@ -70,8 +71,13 @@ export default function App() {
         const response = await fetch("/api/config");
         if (response.ok) {
           const data = await response.json();
-          setApps(data.apps);
-          setIp(data.ip);
+          console.log("Fetched config:", data);
+          if (data && Array.isArray(data.apps)) {
+            setApps(data.apps);
+          }
+          if (data && typeof data.ip === "string") {
+            setIp(data.ip);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch config from backend, using defaults", error);
@@ -84,7 +90,7 @@ export default function App() {
 
   // Initialize statuses when apps change
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && Array.isArray(apps)) {
       setAppStatuses(apps.map(app => ({ ...app, isActive: false, isChecking: true })));
       refreshAll();
     }
@@ -110,7 +116,8 @@ export default function App() {
   };
 
   const refreshAll = async () => {
-    setAppStatuses(prev => prev.map(app => ({ ...app, isChecking: true })));
+    if (!Array.isArray(apps)) return;
+    setAppStatuses(prev => Array.isArray(prev) ? prev.map(app => ({ ...app, isChecking: true })) : []);
     
     const now = new Date();
     const results = await Promise.all(
@@ -139,16 +146,22 @@ export default function App() {
   }, [darkMode]);
 
   const onlineApps = useMemo(() => {
-    return appStatuses.filter(a => a.isActive).sort((a, b) => a.name.localeCompare(b.name));
+    if (!Array.isArray(appStatuses)) return [];
+    return appStatuses
+      .filter(a => a && a.isActive)
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   }, [appStatuses]);
 
   const offlineApps = useMemo(() => {
-    return appStatuses.filter(a => !a.isActive).sort((a, b) => a.name.localeCompare(b.name));
+    if (!Array.isArray(appStatuses)) return [];
+    return appStatuses
+      .filter(a => a && !a.isActive)
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   }, [appStatuses]);
 
   // Settings Handlers
   const openSettings = () => {
-    const sorted = [...apps].sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = [...(Array.isArray(apps) ? apps : [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     setEditingApps(sorted);
     setEditingIp(ip);
     setSettingsError(null);
@@ -339,8 +352,21 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "text-white" : "text-[#1a1a1a]"}`}>
-      <div className="max-w-6xl mx-auto px-6 md:px-12">
+    <ErrorBoundary>
+      <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "text-white" : "text-[#1a1a1a]"}`}>
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-white">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="mb-4"
+            >
+              <RefreshCw size={48} className="text-zinc-400" />
+            </motion.div>
+            <p className="text-zinc-500 font-mono text-sm tracking-widest uppercase">Initializing Home Lab Dashboard</p>
+          </div>
+        ) : (
+          <div className="max-w-6xl mx-auto px-6 md:px-12">
         <header className={`sticky top-0 z-30 pt-12 pb-8 backdrop-blur-md flex flex-col md:flex-row md:items-end justify-between gap-8 mb-8 transition-colors duration-500 ${darkMode ? "bg-[#0a0a0a]/90" : "bg-[#f8f9fa]/90"}`}>
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
@@ -358,10 +384,10 @@ export default function App() {
             <div className="flex items-center gap-4">
               <p className={`text-sm flex items-center gap-2 px-3 py-1 rounded-full border shadow-sm transition-colors ${darkMode ? "bg-zinc-900 border-zinc-800 text-gray-300" : "bg-white border-gray-100 text-gray-500"}`}>
                 <Activity size={14} className="text-green-500" />
-                {appStatuses.filter(a => a.isActive).length} / {apps.length} Online
+                {(Array.isArray(appStatuses) ? appStatuses.filter(a => a && a.isActive).length : 0)} / {(Array.isArray(apps) ? apps.length : 0)} Online
               </p>
               <span className="text-[10px] uppercase tracking-widest text-gray-300 font-medium">
-                Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                Updated {(lastUpdated instanceof Date) ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
               </span>
             </div>
           </motion.div>
@@ -377,7 +403,7 @@ export default function App() {
               className={`p-3 border rounded-2xl transition-all shadow-sm active:scale-95 ${darkMode ? "bg-zinc-900 border-zinc-800 hover:border-white text-white" : "bg-white border-gray-200 hover:border-black text-black"}`}
               title="Refresh Status"
             >
-              <RefreshCw size={20} className={appStatuses.some(a => a.isChecking) ? "animate-spin" : ""} />
+              <RefreshCw size={20} className={(Array.isArray(appStatuses) && appStatuses.some(a => a && a.isChecking)) ? "animate-spin" : ""} />
             </button>
             <button
               id="configure-button"
@@ -440,14 +466,14 @@ export default function App() {
           </div>
         )}
           
-          {apps.length === 0 && (
+          {Array.isArray(apps) && apps.length === 0 && (
             <div className={`col-span-full py-20 text-center border-2 border-dashed rounded-[2.5rem] ${darkMode ? "border-zinc-800" : "border-gray-200"}`}>
               <Info className={`mx-auto mb-4 ${darkMode ? "text-zinc-700" : "text-gray-300"}`} size={48} />
               <p className={`${darkMode ? "text-zinc-500" : "text-gray-400"} font-medium`}>No applications configured.</p>
               <button onClick={openSettings} className={`mt-4 underline font-bold text-sm ${darkMode ? "text-white" : "text-black"}`}>Open Configuration</button>
             </div>
           )}
-        </div>
+        
 
       {/* Settings Modal */}
       <Modal
@@ -878,6 +904,9 @@ export default function App() {
           </div>
         )}
       </Modal>
-    </div>
+          </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }

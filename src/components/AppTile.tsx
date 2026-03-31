@@ -41,12 +41,12 @@ export const AppTile: React.FC<AppTileProps> = ({ app, appUrl, lastChecked, isOn
           darkMode ? "bg-zinc-800 border-zinc-700" : "bg-gray-50 border-gray-100"
         }`}>
           <img 
-            src={app.iconUrl || `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/${app.id.toLowerCase()}.png`}
+            src={app.iconUrl || (app.id ? `https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/${app.id.toLowerCase()}.png` : "")}
             alt={app.name}
             className="w-10 h-10 object-contain"
             referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${app.id}/128/128`;
+              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${app.id || 'app'}/128/128`;
             }}
           />
         </div>
