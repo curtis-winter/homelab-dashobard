@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine as build
+FROM node:20-alpine AS build
 
 # Install git to allow build tools to capture commit information
 RUN apk add --no-cache git
