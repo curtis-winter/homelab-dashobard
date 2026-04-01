@@ -5,6 +5,8 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+@variant dark (&:where(.dark, .dark *));
+
 html, body {
   @apply antialiased transition-colors duration-500;
   overscroll-behavior: none;

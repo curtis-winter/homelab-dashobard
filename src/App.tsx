@@ -355,15 +355,15 @@ export default function App() {
     <ErrorBoundary>
       <div className={`min-h-screen font-sans selection:bg-black selection:text-white transition-colors duration-500 ${darkMode ? "text-white" : "text-[#1a1a1a]"}`}>
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-white">
+          <div className={`flex flex-col items-center justify-center min-h-screen transition-colors duration-500 ${darkMode ? "bg-zinc-950 text-white" : "bg-[#f8f9fa] text-black"}`}>
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               className="mb-4"
             >
-              <RefreshCw size={48} className="text-zinc-400" />
+              <RefreshCw size={48} className={darkMode ? "text-zinc-400" : "text-gray-300"} />
             </motion.div>
-            <p className="text-zinc-500 font-mono text-sm tracking-widest uppercase">Initializing Home Lab Dashboard</p>
+            <p className={`font-mono text-sm tracking-widest uppercase ${darkMode ? "text-zinc-500" : "text-gray-400"}`}>Initializing Home Lab Dashboard</p>
           </div>
         ) : (
           <div className="max-w-6xl mx-auto px-6 md:px-12">
@@ -408,7 +408,7 @@ export default function App() {
             <button
               id="configure-button"
               onClick={openSettings}
-              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all shadow-lg active:scale-95 ${darkMode ? "bg-white text-black hover:bg-gray-200 shadow-white/5" : "bg-black text-white hover:bg-gray-800 shadow-black/10"}`}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all shadow-lg active:scale-95 ${darkMode ? "bg-zinc-900 border border-zinc-800 text-white hover:bg-zinc-800 shadow-white/5" : "bg-white border border-gray-200 text-black hover:bg-gray-50 shadow-black/5"}`}
             >
               <Settings size={18} />
               <span>Configure</span>
@@ -487,7 +487,7 @@ export default function App() {
             <button 
               id="save-settings-button"
               onClick={saveSettings}
-              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold transition-all shadow-xl active:scale-95 ${darkMode ? "bg-white text-black hover:bg-gray-200 shadow-white/5" : "bg-black text-white hover:bg-gray-800 shadow-black/10"}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold transition-all shadow-xl active:scale-95 ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700 shadow-white/5" : "bg-black text-white hover:bg-gray-800 shadow-black/5"}`}
             >
               <Save size={18} />
               Save Changes
@@ -628,7 +628,7 @@ export default function App() {
                           </div>
                           <button 
                             onClick={() => quickAdd(result)}
-                            className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                            className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-white border border-gray-100 text-black hover:bg-gray-50"}`}
                           >
                             <Plus size={12} />
                             Quick Add
@@ -751,7 +751,7 @@ export default function App() {
                             e.stopPropagation();
                             setCurrentlyEditingId(null);
                           }}
-                          className={`p-2 rounded-full shadow-lg transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                          className={`p-2 rounded-full shadow-lg transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-white border border-gray-200 text-black hover:bg-gray-50"}`}
                           title="Confirm Edit"
                         >
                           <Save size={14} />
@@ -798,7 +798,7 @@ export default function App() {
             <div className="flex gap-3">
               <button
                 onClick={saveSingleApp}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-black text-white hover:bg-gray-800"}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${darkMode ? "bg-zinc-800 text-white hover:bg-zinc-700 shadow-white/5" : "bg-black text-white hover:bg-gray-800 shadow-black/5"}`}
               >
                 <Save size={18} />
                 Save Changes
